@@ -1,9 +1,19 @@
 # MCGit
-**Requires Fabric 1.21.11**
-
-MCGit is a Minecraft mod that brings Git-like version control to your Minecraft world. It allows you to track changes to blocks and entities, commit those changes, and manage different versions of your world.
 
 ![MCGit Logo](logo.png)
+**Requires MC 1.21.11 Fabric**
+
+MCGit is a Minecraft mod that brings Git-like version control to your Minecraft world. It allows you to track changes to
+blocks and entities, commit those changes, and manage different versions of your world.
+- If you blow up your base or do a change that doesn't look good, you can just `/git revert`.
+- If you make a change that does look good, do a commit: `/git commit <msg>`
+- You can back up your build and share it using a free hosting service like [GitHub](github.com).
+- You can never lose your progress, every committed version of the build is saved.
+- You can "fork" other people's builds and modify them to your liking as long as they allow it.
+- Other people's builds can be cloned directly into your world.
+- Very lightweight and easy to use.
+- **Does not require external tools:** you do not need to install Git or any other software outside of Minecraft. MCGit 
+bundles JGit, a pure Java implementation of Git, to handle all Git operations internally.
 
 
 ## Commands
@@ -35,3 +45,4 @@ Commands marked with `@` require `setblock` access.\
 -  `/git push  [force|noforce] [remote=origin] [branch=main] ` Push committed changes to the specified remote repository and branch.
 -  `/git auth <username> [password]` Store authentication credentials for accessing remote repositories. If password is omitted, only username is stored.
 **NOTE** Credentials are stored unencrypted as plaintext.
+- `/git branch <name>` Switch to a branch with the given name, or create it if it does not exist.
