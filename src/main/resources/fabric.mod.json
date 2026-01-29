@@ -1,0 +1,46 @@
+{
+	"schemaVersion": 1,
+	"id": "mcgit",
+	"version": "${version}",
+	"name": "MC Git",
+	"description": "get git in mc",
+	"authors": [
+		"itanjim"
+	],
+	"contact": {
+		"homepage": "https://tanjim.org/mcgit",
+		"sources": "https://github.com/itzmetanjim/mcgit"
+	},
+	"license": "GPLv3",
+	"icon": "assets/mcgit/icon.png",
+	"environment": "client",
+	"entrypoints": {
+
+		"client": [
+			{
+				"value": "org.tanjim.MCGitClient",
+				"adapter": "kotlin"
+			}
+		],
+		"fabric-datagen": [
+			{
+				"value": "org.tanjim.MCGitDataGenerator",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"mcgit.mixins.json",
+		{
+			"config": "mcgit.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	}
+}
