@@ -29,26 +29,26 @@ object GitManager {
         }
     var shouldAutoAdd: Boolean
         get(){
-            return File(rootReposDir, "auto_add.txt").exists()
+            return !File(rootReposDir, "no_auto_add.txt").exists()
         }
         set(value){
             rootReposDir.mkdirs()
-            val file = File(rootReposDir, "auto_add.txt")
-            if (value){
-                if (!file.exists()) file.writeText("true")
+            val file = File(rootReposDir, "no_auto_add.txt")
+            if (!value){
+                if (!file.exists()) file.writeText("no_auto_add")
             } else {
                 if (file.exists()) file.delete()
             }
         }
     var shouldAutoRm: Boolean
         get(){
-            return File(rootReposDir, "auto_rm.txt").exists()
+            return !File(rootReposDir, "no_auto_rm.txt").exists()
         }
         set(value){
             rootReposDir.mkdirs()
-            val file = File(rootReposDir, "auto_rm.txt")
-            if (value){
-                if (!file.exists()) file.writeText("true")
+            val file = File(rootReposDir, "no_auto_rm.txt")
+            if (!value){
+                if (!file.exists()) file.writeText("no_auto_rm")
             } else {
                 if (file.exists()) file.delete()
             }
@@ -573,7 +573,7 @@ object GitManager {
                     "Auto-add ${if (shouldAutoAdd) "enabled" else "disabled"}."
                 }
                 ""->{
-                    "Auto-add is currently ${if (shouldAutoAdd) "enabled" else "disabled"}."
+                    "Auto-add is currently ${if (shouldAutoAdd) "enabled" else "disabled"}. Use /git autoadd <true|false|toggle> to change."
                 }
                 else->"Error: Invalid option. Use true/false/toggle."
             }
@@ -596,7 +596,7 @@ object GitManager {
                     "Auto-rm ${if (shouldAutoRm) "enabled" else "disabled"}."
                 }
                 ""->{
-                    "Auto-rm is currently ${if (shouldAutoRm) "enabled" else "disabled"}."
+                    "Auto-rm is currently ${if (shouldAutoRm) "enabled" else "disabled"}. Use /git autorm <true|false|toggle> to change."
                 }
                 else->"Error: Invalid option. Use true/false/toggle."
             }
