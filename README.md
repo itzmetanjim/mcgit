@@ -21,6 +21,11 @@ bundles JGit, a pure Java implementation of Git, to handle all Git operations in
 Commands marked with `@` require `setblock` access.\
 `[..]` indicates optional arguments.
 
+**NOTE**: It is **perfectly normal** for errors like "Couldn't set block" to appear. These just mean that MCGit tried changing a block to itself. This is harmless.
+
+**NOTE2**: If you do not have `/git autoadd` and `/git autorm` enabled, you need to manually add and remove block/s to/from the staging area using `/git add` and `/git rm`.\
+To prevent confusion, this is now enabled by default **but only in creative mode**.
+
 -  `/git init <name>` Initialize a new MCGit repository.
 -  `/git activate <name>` Switch to the specified repository.
 -  `/git add <coords>` Add one block at the specified coordinates to the staging area.
@@ -28,11 +33,11 @@ Commands marked with `@` require `setblock` access.\
 - @`/git rm <coords> [coords] [|hollow|outline]` Remove blocks/entities from the staging area and revert them. NOTE: Changing blocks/entities in the world needs to be done by issuing commands, as this is a clientside mod.
 -  `/git unstage ...`  does not revert , only removes from staging area.
 -  `/git commit [-m] "message"` Commit the staged changes with a message. The `-m` flag does nothing.
-- @`/git revert [commit-hash]` `/git reset` but it changes the world as well. Commit hash can be ommitted to revert to the latest commit.
--  `/git reset [commit-hash]` Reset to a specific commit hash or the latest commit. This does not revert the actual world. THis is the reverse of `/git add`
+- @`/git revert [commit-hash]` `/git reset` but it changes the world as well. Commit hash can be omitted to revert to the latest commit (HEAD).
+-  `/git reset [commit-hash]` Reset to a specific commit hash or the latest commit. This does not revert the actual world. This is the reverse of `/git add`
 -  `/git status` Show the current status of the repository, including staged changes, unstaged changes, but not untracked blocks/entities.
--  `/git listCommits` Lists all commits in the current branch.
--  `/git listRepos` Lists all available repositories.
+-  `/git commitList` Lists all commits in the current branch.
+-  `/git repoList` Lists all available repositories.
 -  `/git autoadd [toggle|on|off]` Enable or disable automatic addition of changes to the staging area. To quickly switch between, use an enchanted red wool in offhand to make this act toggled (so if you have it in offhand, auto add is off, otherwise on).
 -  `/git autorm [toggle|on|off]` Enable or disable automatic removal of deleted blocks/entities from the staging area. To quickly switch between, use an enchanted red wool in offhand to make this act toggled (so if you have it in offhand, autorm is off, otherwise on).
 - @`/git clone <name> <url/local>` Clone a remote repository from the specified URL into a new local repository with the given name.
