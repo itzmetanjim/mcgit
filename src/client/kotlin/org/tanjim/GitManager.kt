@@ -461,8 +461,14 @@ object GitManager {
         val root= getRepoRoot() ?: return "Error: No active repository. Try /git init or /git activate <repo>."
         return try {
             Git.open(root).use{git->
-                val cmd=git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.MIXED)
+                if(git.repository.resolve("HEAD")==null){
+                    return "Error: No commits to reset to. Try /git commit first."
+                }
+                val cmd=git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD)
                 if (hash!=null){cmd.setRef(hash)}
+                else{
+                    cmd.setRef(git.repository.resolve("HEAD")?.name)
+                }
                 cmd.call()
                 "Reset index to ${"commit $hash"?:"HEAD"}."
             }
@@ -490,8 +496,14 @@ object GitManager {
         val root= getRepoRoot() ?: return "Error: No active repository. Try /git init or /git activate <repo>."
         return try {
             Git.open(root).use{git->
-                val cmd=git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.MIXED)
+                val cmd=git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD)
                 if (hash!=null){cmd.setRef(hash)}
+                else{
+                    if(git.repository.resolve("HEAD")==null){
+                        return "Error: No commits to revert to. Try /git commit first."
+                    }
+                    cmd.setRef(git.repository.resolve("HEAD")?.name)
+                }
                 cmd.call()
                 gitToWorld()
                 "Reverted world to ${"commit $hash"?:"HEAD"}."
