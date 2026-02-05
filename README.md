@@ -1,6 +1,7 @@
 # MCGit
 
 ![MCGit Logo](logo.png)
+
 **Requires MC 1.21.11 Fabric**
 
 MCGit is a Minecraft mod that brings Git-like version control to your Minecraft world. It allows you to track changes to
