@@ -6,6 +6,8 @@ import net.minecraft.nbt.NbtHelper
 import net.minecraft.util.math.BlockPos
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.lib.ObjectId
 import java.io.File
 import net.minecraft.nbt.NbtCompound
 
@@ -474,9 +476,75 @@ object GitManager {
             }
         } catch(e: Exception){"Error in reset:${e.message}"}
     }
-    fun gitToWorld(){
+    private fun getWorkingTreeBBox(): BBox? {
+        val origin = getOrigin()
+        val dimDir = getActiveDimensionDir() ?: return null
+        var minX = Int.MAX_VALUE; var minY = Int.MAX_VALUE; var minZ = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE; var maxY = Int.MIN_VALUE; var maxZ = Int.MIN_VALUE
+        var found = false
+        dimDir.walkTopDown().filter { it.extension == "snbt" }.forEach { file ->
+            val relPath = file.relativeTo(dimDir).path.replace(".snbt", "")
+            val parts = relPath.split(File.separator)
+            if (parts.size == 3) {
+                val wx = parts[0].toInt() + origin.x
+                val wy = parts[1].toInt() + origin.y
+                val wz = parts[2].toInt() + origin.z
+                if (wx < minX) minX = wx; if (wx > maxX) maxX = wx
+                if (wy < minY) minY = wy; if (wy > maxY) maxY = wy
+                if (wz < minZ) minZ = wz; if (wz > maxZ) maxZ = wz
+                found = true
+            }
+        }
+        return if (found) BBox(minX, minY, minZ, maxX, maxY, maxZ) else null
+    }
+
+    /**
+     * Returns the bounding box (as world coords) of all .snbt files in a given git commit/ref
+     * for the active dimension, or null if there are none.
+     */
+    private fun getCommitBBox(git: Git, ref: String): BBox? {
+        val origin = getOrigin()
+        val dimPrefix = getCurrentDimensionPath().replace("\\", "/") + "/"
+        val objectId = git.repository.resolve(ref) ?: return null
+        val commit = git.repository.parseCommit(objectId)
+        var minX = Int.MAX_VALUE; var minY = Int.MAX_VALUE; var minZ = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE; var maxY = Int.MIN_VALUE; var maxZ = Int.MIN_VALUE
+        var found = false
+        TreeWalk(git.repository).use { tw ->
+            tw.addTree(commit.tree)
+            tw.isRecursive = true
+            while (tw.next()) {
+                val path = tw.pathString
+                if (path.startsWith(dimPrefix) && path.endsWith(".snbt")) {
+                    val rel = path.removePrefix(dimPrefix).removeSuffix(".snbt")
+                    val parts = rel.split("/")
+                    if (parts.size == 3) {
+                        val wx = parts[0].toInt() + origin.x
+                        val wy = parts[1].toInt() + origin.y
+                        val wz = parts[2].toInt() + origin.z
+                        if (wx < minX) minX = wx; if (wx > maxX) maxX = wx
+                        if (wy < minY) minY = wy; if (wy > maxY) maxY = wy
+                        if (wz < minZ) minZ = wz; if (wz > maxZ) maxZ = wz
+                        found = true
+                    }
+                }
+            }
+        }
+        return if (found) BBox(minX, minY, minZ, maxX, maxY, maxZ) else null
+    }
+
+    data class BBox(val minX: Int, val minY: Int, val minZ: Int, val maxX: Int, val maxY: Int, val maxZ: Int) {
+        fun union(other: BBox) = BBox(
+            minOf(minX, other.minX), minOf(minY, other.minY), minOf(minZ, other.minZ),
+            maxOf(maxX, other.maxX), maxOf(maxY, other.maxY), maxOf(maxZ, other.maxZ)
+        )
+    }
+
+    fun gitToWorld(clearBBox: BBox? = null){
         val origin = getOrigin()
         val dimDir = getActiveDimensionDir() ?: return
+        data class BlockEntry(val worldX: Int, val worldY: Int, val worldZ: Int, val snbt: String)
+        val entries = mutableListOf<BlockEntry>()
         dimDir.walkTopDown().filter { it.extension == "snbt" }.forEach { file ->
             val relPath = file.relativeTo(dimDir).path.replace(".snbt", "")
             val parts = relPath.split(File.separator)
@@ -484,31 +552,48 @@ object GitManager {
                 val worldX = parts[0].toInt() + origin.x
                 val worldY = parts[1].toInt() + origin.y
                 val worldZ = parts[2].toInt() + origin.z
-
-                val snbt = file.readText()
-                val nbt = net.minecraft.nbt.StringNbtReader.readCompound(snbt) as NbtCompound
-                val cmd=nbtToSetblock(worldX,worldY,worldZ,nbt)
-                CommandQueue.add(cmd)
+                entries.add(BlockEntry(worldX, worldY, worldZ, file.readText()))
             }
+        }
+        val bbox: BBox? = clearBBox ?: if (entries.isEmpty()) null else BBox(
+            entries.minOf { it.worldX }, entries.minOf { it.worldY }, entries.minOf { it.worldZ },
+            entries.maxOf { it.worldX }, entries.maxOf { it.worldY }, entries.maxOf { it.worldZ }
+        )
+
+        if (bbox != null) {
+            CommandQueue.add("fill ${bbox.minX} ${bbox.minY} ${bbox.minZ} ${bbox.maxX} ${bbox.maxY} ${bbox.maxZ} air replace")
+        }
+
+        for (entry in entries) {
+            val nbt = net.minecraft.nbt.StringNbtReader.readCompound(entry.snbt) as NbtCompound
+            val cmd = nbtToSetblock(entry.worldX, entry.worldY, entry.worldZ, nbt)
+            CommandQueue.add(cmd)
         }
     }
     fun revert(hash:String? = null):String{
         val root= getRepoRoot() ?: return "Error: No active repository. Try /git init or /git activate <repo>."
         return try {
             Git.open(root).use{git->
-                val cmd=git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD)
-                if (hash!=null){cmd.setRef(hash)}
-                else{
-                    if(git.repository.resolve("HEAD")==null){
-                        return "Error: No commits to revert to. Try /git commit first."
-                    }
-                    cmd.setRef(git.repository.resolve("HEAD")?.name)
+                if(git.repository.resolve("HEAD")==null){
+                    return "Error: No commits to revert to. Try /git commit first."
                 }
+                val targetRef = hash ?: git.repository.resolve("HEAD")?.name
+                    ?: return "Error: Could not resolve HEAD."
+                val preBBox = getWorkingTreeBBox()
+                val postBBox = getCommitBBox(git, targetRef)
+                val clearBBox: BBox? = when {
+                    preBBox != null && postBBox != null -> preBBox.union(postBBox)
+                    preBBox != null -> preBBox
+                    postBBox != null -> postBBox
+                    else -> null
+                }
+                val cmd = git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD)
+                cmd.setRef(targetRef)
                 cmd.call()
-                gitToWorld()
-                "Reverted world to ${"commit $hash"?:"HEAD"}."
+                gitToWorld(clearBBox)
+                "Reverted world to ${if (hash != null) "commit $hash" else "HEAD"}."
             }
-        } catch(e: Exception){"Error in reset:${e.message}"}
+        } catch(e: Exception){"Error in revert: ${e.message}"}
     }
     fun listRepos():String{
         val sb = StringBuilder()
