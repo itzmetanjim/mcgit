@@ -16,6 +16,7 @@ blocks and entities, commit those changes, and manage different versions of your
 - **Does not require external tools:** you do not need to install Git or any other software outside of Minecraft. MCGit 
 bundles JGit, a pure Java implementation of Git, to handle all Git operations internally.
 
+Dependencies: JGit
 
 ## Commands
 
