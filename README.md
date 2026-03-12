@@ -2,7 +2,7 @@
 
 ![MCGit Logo](logo.png)
 
-**Requires MC 1.21.11 Fabric**
+**Requires MC 1.21.11 Fabric, fabric-api and fabric-language-kotlin**
 
 MCGit is a Minecraft mod that brings Git-like version control to your Minecraft world. It allows you to track changes to
 blocks and entities, commit those changes, and manage different versions of your world.
@@ -16,7 +16,6 @@ blocks and entities, commit those changes, and manage different versions of your
 - **Does not require external tools:** you do not need to install Git or any other software outside of Minecraft. MCGit 
 bundles JGit, a pure Java implementation of Git, to handle all Git operations internally.
 
-Dependencies: JGit
 
 ## Commands
 
