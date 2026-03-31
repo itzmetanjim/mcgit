@@ -744,33 +744,37 @@ object GitManager {
         if(File(rootReposDir,name).exists()){
             return "Error: Target repository '$name' already exists."
         }
-        if(!url.startsWith("http")){
-            val src = File(rootReposDir,url)
-            if (!src.exists() || !File(src, ".git").exists()) {
-                return ("Error: Source repository '$url' does not exist.")
-            }
-            try{
-                val dest = File(rootReposDir,name)
-                src.copyTo(dest,true)
-                activateRepository(name)
-                val client = MinecraftClient.getInstance()
-                val player = client.player
-                if (player != null) saveOrigin(player.blockPos)
-                return "Cloned local repository '$url' to '$name'."
-            }catch(e:Exception){
-                return "Error in cloning local repository: ${e.message}"
+        val actualUrl = when {
+            url.startsWith("http") -> url
+            url.contains("/") && !url.contains(File.separator) -> "https://github.com/$url.git"
+            else -> {
+                val src = File(rootReposDir,url)
+                if (!src.exists() || !File(src, ".git").exists()) {
+                    return ("Error: Source repository '$url' does not exist.")
+                }
+                try{
+                    val dest = File(rootReposDir,name)
+                    src.copyRecursively(dest,true)
+                    activateRepository(name)
+                    val client = MinecraftClient.getInstance()
+                    val player = client.player
+                    if (player != null) saveOrigin(player.blockPos)
+                    return "Cloned local repository '$url' to '$name'."
+                }catch(e:Exception){
+                    return "Error in cloning local repository: ${e.message}"
+                }
             }
         }
         try{
             val dest = File(rootReposDir,name)
-            val cloneCmd = Git.cloneRepository().setURI(url).setDirectory(dest)
+            val cloneCmd = Git.cloneRepository().setURI(actualUrl).setDirectory(dest)
             getCredentialsProvider()?.let { cloneCmd.setCredentialsProvider(it) }
             cloneCmd.call()
             activateRepository(name)
             val client = MinecraftClient.getInstance()
             val player = client.player
             if (player != null) saveOrigin(player.blockPos)
-            return "Cloned repository from '$url' to '$name'."
+            return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
             return "Error in cloning repository from URL: ${e.message}"
         }
@@ -781,27 +785,31 @@ object GitManager {
         if(File(rootReposDir,name).exists()){
             return "Error: Target repository '$name' already exists."
         }
-        if(!url.startsWith("http")){
-            val src = File(rootReposDir,url)
-            if (!src.exists() || !File(src, ".git").exists()) {
-                return ("Error: Source repository '$url' does not exist.")
-            }
-            try{
-                val dest = File(rootReposDir,name)
-                src.copyTo(dest,true)
-                activateRepository(name)
-                val client = MinecraftClient.getInstance()
-                val player = client.player
-                if (player != null) saveOrigin(player.blockPos)
-                gitToWorld()
-                return "Cloned local repository '$url' to '$name'."
-            }catch(e:Exception){
-                return "Error in cloning local repository: ${e.message}"
+        val actualUrl = when {
+            url.startsWith("http") -> url
+            url.contains("/") && !url.contains(File.separator) -> "https://github.com/$url.git"
+            else -> {
+                val src = File(rootReposDir,url)
+                if (!src.exists() || !File(src, ".git").exists()) {
+                    return ("Error: Source repository '$url' does not exist.")
+                }
+                try{
+                    val dest = File(rootReposDir,name)
+                    src.copyRecursively(dest,true)
+                    activateRepository(name)
+                    val client = MinecraftClient.getInstance()
+                    val player = client.player
+                    if (player != null) saveOrigin(player.blockPos)
+                    gitToWorld()
+                    return "Cloned local repository '$url' to '$name'."
+                }catch(e:Exception){
+                    return "Error in cloning local repository: ${e.message}"
+                }
             }
         }
         try{
             val dest = File(rootReposDir,name)
-            val cloneCmd = Git.cloneRepository().setURI(url).setDirectory(dest)
+            val cloneCmd = Git.cloneRepository().setURI(actualUrl).setDirectory(dest)
             getCredentialsProvider()?.let { cloneCmd.setCredentialsProvider(it) }
             cloneCmd.call()
             activateRepository(name)
@@ -809,7 +817,7 @@ object GitManager {
             val player = client.player
             if (player != null) saveOrigin(player.blockPos)
             gitToWorld()
-            return "Cloned repository from '$url' to '$name'."
+            return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
             return "Error in cloning repository from URL: ${e.message}"
         }
