@@ -2,20 +2,20 @@ package org.tanjim
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
-import net.minecraft.client.MinecraftClient
+import net.minecraft.client.Minecraft
 import java.util.concurrent.ConcurrentLinkedQueue
 
 object CommandQueue {
     private val queue = ConcurrentLinkedQueue<String>()
     private var commandsPerTick = 1
     fun adjustSpeed(){
-        val client=MinecraftClient.getInstance()
-        if(client.isIntegratedServerRunning){
+        val client= Minecraft.getInstance()
+        if(client.isLocalServer){
             commandsPerTick = 100
             return
         }
-        val brand = client.player?.networkHandler?.brand?.lowercase() ?: "unknown" //spigot,paper,etc
-        commandsPerTick = if(brand.contains("paper") || brand.contains("spigot")){1} else{5}
+        val serverBrand = client.player?.connection?.serverBrand()?.lowercase() ?: "unknown" //spigot,paper,etc
+        commandsPerTick = if(serverBrand.contains("paper") || serverBrand.contains("spigot")){1} else{5}
 
     }
 
@@ -29,7 +29,7 @@ object CommandQueue {
 
             repeat(commandsPerTick) {
                 val cmd = queue.poll() ?: return@register
-                client.player?.networkHandler?.sendChatCommand(cmd)
+                client.player?.connection?.sendCommand(cmd)
             }
 
         }

@@ -3,18 +3,17 @@ package org.tanjim
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.api.ClientModInitializer
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.*
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback
 import net.fabricmc.fabric.api.event.player.UseBlockCallback
-import net.minecraft.command.argument.BlockPosArgumentType
-import net.minecraft.command.argument.CoordinateArgument
-import net.minecraft.command.argument.DefaultPosArgument
-import net.minecraft.command.argument.PosArgument
-import net.minecraft.text.Text
-import net.minecraft.util.ActionResult
-import net.minecraft.util.math.BlockPos
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument
+import net.minecraft.commands.arguments.coordinates.Coordinates
+import net.minecraft.network.chat.Component
+import net.minecraft.core.BlockPos
+import net.minecraft.world.InteractionResult
 import org.tanjim.CommandQueue
 class MCGitClient : ClientModInitializer {
 	override fun onInitializeClient() {
@@ -25,35 +24,35 @@ class MCGitClient : ClientModInitializer {
 					.then(argument<String>("name", StringArgumentType.word())
 						.executes { context ->
 							val name = StringArgumentType.getString(context, "name")
-							context.source.sendFeedback(Text.literal(GitManager.initialize(name)))
+							context.source.sendFeedback(Component.literal(GitManager.initialize(name)))
 							1
 						}
 					)
 				)
 				.then(literal("add")
-					.then(argument<PosArgument>("coords1", BlockPosArgumentType.blockPos())
+					.then(argument("coords1", BlockPosArgument.blockPos())
 						.executes { context ->
 							val pos1 = getClientBlockPos(context, "coords1")
-							context.source.sendFeedback(Text.literal(GitManager.addBlock(pos1)))
+							context.source.sendFeedback(Component.literal(GitManager.addBlock(pos1)))
 							1
 						}
-						.then(argument<PosArgument>("coords2", BlockPosArgumentType.blockPos())
+						.then(argument("coords2", BlockPosArgument.blockPos())
 							.executes { context ->
 								val pos1 = getClientBlockPos(context, "coords1")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.addBlocks(pos1, pos2, "all")))
+								context.source.sendFeedback(Component.literal(GitManager.addBlocks(pos1, pos2, "all")))
 								1
 							}
 							.then(literal("hollow").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords1")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.addBlocks(pos1, pos2, "hollow")))
+								context.source.sendFeedback(Component.literal(GitManager.addBlocks(pos1, pos2, "hollow")))
 								1
 							})
 							.then(literal("outline").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords1")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.addBlocks(pos1, pos2, "outline")))
+								context.source.sendFeedback(Component.literal(GitManager.addBlocks(pos1, pos2, "outline")))
 								1
 							})
 						)
@@ -63,209 +62,207 @@ class MCGitClient : ClientModInitializer {
 					.then(argument<String>("message", StringArgumentType.greedyString())
 						.executes { context ->
 							val message = StringArgumentType.getString(context, "message")
-							context.source.sendFeedback(Text.literal(GitManager.commit(message)))
+							context.source.sendFeedback(Component.literal(GitManager.commit(message)))
 							1
 						}
 					)
 				)
-				.then(literal("origin") //git origin <coords> -> GitManager.relocateOrigin
-					.then(argument<PosArgument>("coords", BlockPosArgumentType.blockPos())
+				.then(literal("origin")
+					.then(argument("coords", BlockPosArgument.blockPos())
 						.executes { context ->
 							val newOrigin = getClientBlockPos(context, "coords")
-							context.source.sendFeedback(Text.literal(GitManager.relocateOrigin(newOrigin)))
+							context.source.sendFeedback(Component.literal(GitManager.relocateOrigin(newOrigin)))
 							1
 						}
 					)
 				)
-				.then(literal("activate") //git activate <name> -> GitManager.activateRepository
+				.then(literal("activate")
 					.then(argument<String>("name", StringArgumentType.word())
 						.executes { context ->
 							val name = StringArgumentType.getString(context, "name")
-							context.source.sendFeedback(Text.literal(GitManager.activateRepository(name)))
+							context.source.sendFeedback(Component.literal(GitManager.activateRepository(name)))
 							1
 						}
 					)
 				)
-				.then(literal("rm") //git rm <coords> -> GitManager.rmBlock
-					.then(argument<PosArgument>("coords", BlockPosArgumentType.blockPos())
+				.then(literal("rm")
+					.then(argument("coords", BlockPosArgument.blockPos())
 						.executes { context ->
 							val pos = getClientBlockPos(context, "coords")
-							context.source.sendFeedback(Text.literal(GitManager.rmBlock(pos)))
+							context.source.sendFeedback(Component.literal(GitManager.rmBlock(pos)))
 							1
 						}
-						//git rm <coords1> <coords2> ["hollow"|"outline"|""]-> GitManager.rmBlocks
-						.then(argument<PosArgument>("coords2", BlockPosArgumentType.blockPos())
+						.then(argument("coords2", BlockPosArgument.blockPos())
 							.executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.rmBlocks(pos1, pos2, "")))
+								context.source.sendFeedback(Component.literal(GitManager.rmBlocks(pos1, pos2, "")))
 								1
 							}
 							.then(literal("hollow").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.rmBlocks(pos1, pos2, "hollow")))
+								context.source.sendFeedback(Component.literal(GitManager.rmBlocks(pos1, pos2, "hollow")))
 								1
 							})
 							.then(literal("outline").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.rmBlocks(pos1, pos2, "outline")))
+								context.source.sendFeedback(Component.literal(GitManager.rmBlocks(pos1, pos2, "outline")))
 								1
 							})
 						)
 					)
-				).then(literal("unstage") //git rm <coords> -> GitManager.rmBlock
-					.then(argument<PosArgument>("coords", BlockPosArgumentType.blockPos())
+				).then(literal("unstage")
+					.then(argument("coords", BlockPosArgument.blockPos())
 						.executes { context ->
 							val pos = getClientBlockPos(context, "coords")
-							context.source.sendFeedback(Text.literal(GitManager.unstageBlock(pos)))
+							context.source.sendFeedback(Component.literal(GitManager.unstageBlock(pos)))
 							1
 						}
-						//git rm <coords1> <coords2> ["hollow"|"outline"|""]-> GitManager.rmBlocks
-						.then(argument<PosArgument>("coords2", BlockPosArgumentType.blockPos())
+						.then(argument("coords2", BlockPosArgument.blockPos())
 							.executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.unstageBlocks(pos1, pos2, "")))
+								context.source.sendFeedback(Component.literal(GitManager.unstageBlocks(pos1, pos2, "")))
 								1
 							}
 							.then(literal("hollow").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.unstageBlocks(pos1, pos2, "hollow")))
+								context.source.sendFeedback(Component.literal(GitManager.unstageBlocks(pos1, pos2, "hollow")))
 								1
 							})
 							.then(literal("outline").executes { context ->
 								val pos1 = getClientBlockPos(context, "coords")
 								val pos2 = getClientBlockPos(context, "coords2")
-								context.source.sendFeedback(Text.literal(GitManager.unstageBlocks(pos1, pos2, "outline")))
+								context.source.sendFeedback(Component.literal(GitManager.unstageBlocks(pos1, pos2, "outline")))
 								1
 							})
 						)
 					)
 				).then(literal("status").executes {context ->
-					context.source.sendFeedback(Text.literal(GitManager.status()))
+					context.source.sendFeedback(Component.literal(GitManager.status()))
 					1
 				}
 				).then(literal("repoList").executes { context ->
-					context.source.sendFeedback(Text.literal(GitManager.listRepos()))
+					context.source.sendFeedback(Component.literal(GitManager.listRepos()))
 					1
 				}
 				).then(literal("commitList").executes { context ->
-					context.source.sendFeedback(Text.literal(GitManager.listCommits()))
+					context.source.sendFeedback(Component.literal(GitManager.listCommits()))
 					1
 				}
 				).then(literal("revert")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.revert()))
+						context.source.sendFeedback(Component.literal(GitManager.revert()))
 						1
 					}
 					.then(argument<String>("commitHash", StringArgumentType.word())
 						.executes { context ->
 							val commitHash = StringArgumentType.getString(context, "commitHash")
-							context.source.sendFeedback(Text.literal(GitManager.revert(commitHash)))
+							context.source.sendFeedback(Component.literal(GitManager.revert(commitHash)))
 							1
 						}
 					)
 				).then(literal("reset")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.reset()))
+						context.source.sendFeedback(Component.literal(GitManager.reset()))
 						1
 					}
 					.then(argument<String>("commitHash", StringArgumentType.word())
 						.executes { context ->
 							val commitHash = StringArgumentType.getString(context, "commitHash")
-							context.source.sendFeedback(Text.literal(GitManager.reset(commitHash)))
+							context.source.sendFeedback(Component.literal(GitManager.reset(commitHash)))
 							1
 						}
 					)
-				).then(literal("autoadd") //git autoadd [true/false/toggle/""] -> GitManager.setAutoAdd
+				).then(literal("autoadd")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoAdd("")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoAdd("")))
 						1
 					}
 					.then(literal("true").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoAdd("true")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoAdd("true")))
 						1
 					}
 					).then(literal("false").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoAdd("false")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoAdd("false")))
 						1
 					}
 					).then(literal("toggle").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoAdd("toggle")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoAdd("toggle")))
 						1
 					}
 					)
-				).then(literal("autorm") //git autorm [true/false/toggle/""] -> GitManager.setAutoRm
+				).then(literal("autorm")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoRm("")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoRm("")))
 						1
 					}
 					.then(literal("true").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoRm("true")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoRm("true")))
 						1
 					}
 					).then(literal("false").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoRm("false")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoRm("false")))
 						1
 					}
 					).then(literal("toggle").executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.setAutoRm("toggle")))
+						context.source.sendFeedback(Component.literal(GitManager.setAutoRm("toggle")))
 						1
 					}
 					)
-				) //git clone <url> <name> -> GitManager.clone
+				)
 				.then(literal("clone")
 						.then(argument<String>("name", StringArgumentType.word())
 							.then(argument<String>("url", StringArgumentType.greedyString())
 							.executes { context ->
 								val url = StringArgumentType.getString(context, "url")
 								val name = StringArgumentType.getString(context, "name")
-								context.source.sendFeedback(Text.literal(GitManager.clone(url, name)))
+								context.source.sendFeedback(Component.literal(GitManager.clone(url, name)))
 								1
 							}
 						)
 					)
-				) //git clonesoft <name> <url> -> GitManager.clonesoft
+				)
 				.then(literal("clonesoft")
 					.then(argument<String>("name", StringArgumentType.word())
 						.then(argument<String>("url", StringArgumentType.greedyString())
 							.executes { context ->
 								val url = StringArgumentType.getString(context, "url")
 								val name = StringArgumentType.getString(context, "name")
-								context.source.sendFeedback(Text.literal(GitManager.clonesoft(url, name)))
+								context.source.sendFeedback(Component.literal(GitManager.clonesoft(url, name)))
 								1
 							}
 						)
 					)
-				) //git put <name> -> GitManager.put
+				)
 				.then(literal("put")
 					.then(argument<String>("name", StringArgumentType.word())
 						.executes { context ->
 							val name = StringArgumentType.getString(context, "name")
-							context.source.sendFeedback(Text.literal(GitManager.put(name)))
+							context.source.sendFeedback(Component.literal(GitManager.put(name)))
 							1
 						}
 					)
-				) //git pull [remote=origin] [branch=current] [default|ff-only|rebase|no-rebase] -> GitManager.pullRepo
+				)
 				.then(literal("pull")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.pullRepo("origin", null, "default")))
+						context.source.sendFeedback(Component.literal(GitManager.pullRepo("origin", null, "default")))
 						1
 					}
 					.then(argument<String>("remote", StringArgumentType.word())
 						.executes { context ->
 							val remote = StringArgumentType.getString(context, "remote")
-							context.source.sendFeedback(Text.literal(GitManager.pullRepo(remote, null, "default")))
+							context.source.sendFeedback(Component.literal(GitManager.pullRepo(remote, null, "default")))
 							1
 						}
 						.then(argument<String>("branch", StringArgumentType.word())
 							.executes { context ->
 								val remote = StringArgumentType.getString(context, "remote")
 								val branch = StringArgumentType.getString(context, "branch")
-								context.source.sendFeedback(Text.literal(GitManager.pullRepo(remote, branch, "default")))
+								context.source.sendFeedback(Component.literal(GitManager.pullRepo(remote, branch, "default")))
 								1
 							}
 							.then(argument<String>("strategy", StringArgumentType.word())
@@ -274,7 +271,7 @@ class MCGitClient : ClientModInitializer {
 									val branch = StringArgumentType.getString(context, "branch")
 									val strategy = StringArgumentType.getString(context, "strategy")
 									context.source.sendFeedback(
-										Text.literal(
+										Component.literal(
 											GitManager.pullRepo(
 												remote,
 												branch,
@@ -287,41 +284,41 @@ class MCGitClient : ClientModInitializer {
 							)
 						)
 					)
-				)//git fetch [remote=origin] -> GitManger.fetch
+				)
 				.then(literal("fetch")
 					.executes { context ->
-						context.source.sendFeedback(Text.literal(GitManager.fetch("origin")))
+						context.source.sendFeedback(Component.literal(GitManager.fetch("origin")))
 						1
 					}
 					.then(argument<String>("remote", StringArgumentType.word())
 						.executes { context ->
 							val remote = StringArgumentType.getString(context, "remote")
-							context.source.sendFeedback(Text.literal(GitManager.fetch(remote)))
+							context.source.sendFeedback(Component.literal(GitManager.fetch(remote)))
 							1
 						}
 					)
-				)//`/git push [force|noforce] [remote=origin] [branch=current]` -> GitManager.push(remote,branch,true/false)
+				)
 				.then(literal("push")
 					.executes{ context ->
-						context.source.sendFeedback(Text.literal(GitManager.push("origin",null,false)))
+						context.source.sendFeedback(Component.literal(GitManager.push("origin",null,false)))
 						1
 					}
 					.then(literal("force")
 						.executes{ context ->
-							context.source.sendFeedback(Text.literal(GitManager.push("origin",null,true)))
+							context.source.sendFeedback(Component.literal(GitManager.push("origin",null,true)))
 							1
 						}
 						.then(argument<String>("remote", StringArgumentType.word())
 							.executes{ context ->
 								val remote=StringArgumentType.getString(context,"remote")
-								context.source.sendFeedback(Text.literal(GitManager.push(remote,null,true)))
+								context.source.sendFeedback(Component.literal(GitManager.push(remote,null,true)))
 								1
 							}
 							.then(argument<String>("branch", StringArgumentType.word())
 								.executes{ context ->
 									val remote=StringArgumentType.getString(context,"remote")
 									val branch=StringArgumentType.getString(context,"branch")
-									context.source.sendFeedback(Text.literal(GitManager.push(remote,branch,true)))
+									context.source.sendFeedback(Component.literal(GitManager.push(remote,branch,true)))
 									1
 								}
 							)
@@ -329,35 +326,35 @@ class MCGitClient : ClientModInitializer {
 					)
 					.then(literal("noforce")
 						.executes{ context ->
-							context.source.sendFeedback(Text.literal(GitManager.push("origin",null,false)))
+							context.source.sendFeedback(Component.literal(GitManager.push("origin",null,false)))
 							1
 						}
 						.then(argument<String>("remote", StringArgumentType.word())
 							.executes{ context ->
 								val remote=StringArgumentType.getString(context,"remote")
-								context.source.sendFeedback(Text.literal(GitManager.push(remote,null,false)))
+								context.source.sendFeedback(Component.literal(GitManager.push(remote,null,false)))
 								1
 							}
 							.then(argument<String>("branch", StringArgumentType.word())
 								.executes{ context ->
 									val remote=StringArgumentType.getString(context,"remote")
 									val branch=StringArgumentType.getString(context,"branch")
-									context.source.sendFeedback(Text.literal(GitManager.push(remote,branch,false)))
+									context.source.sendFeedback(Component.literal(GitManager.push(remote,branch,false)))
 									1
 								}
 							)
 						)
 					)
-				)//git branch <name>
+				)
 				.then(literal("branch")
 					.then(argument<String>("name", StringArgumentType.word())
 						.executes { context ->
 							val name = StringArgumentType.getString(context, "name")
-							context.source.sendFeedback(Text.literal(GitManager.switchBranch(name)))
+							context.source.sendFeedback(Component.literal(GitManager.switchBranch(name)))
 							1
 						}
 					)
-				)//git remote add <name> <url> -> GitManager.addRemote
+				)
 				.then(literal("remote")
 					.then(literal("add")
 						.then(argument<String>("name", StringArgumentType.word())
@@ -365,25 +362,25 @@ class MCGitClient : ClientModInitializer {
 								.executes { context ->
 									val name = StringArgumentType.getString(context, "name")
 									val url = StringArgumentType.getString(context, "url")
-									context.source.sendFeedback(Text.literal(GitManager.addRemote(url, name)))
+									context.source.sendFeedback(Component.literal(GitManager.addRemote(url, name)))
 									1
 								}
 							)
 						)
 					)
-				)//git auth <username> [password] -> GitManager.setAuth
+				)
 				.then(literal("auth")
-					.then(argument<String>("username", StringArgumentType.word())
-						.executes { context ->
+					.then(argument("username", StringArgumentType.word())
+						.executes { context: CommandContext<FabricClientCommandSource> ->
 							val username = StringArgumentType.getString(context, "username")
-							context.source.sendFeedback(Text.literal(GitManager.setAuth(username)))
+							context.source.sendFeedback(Component.literal(GitManager.setAuth(username)))
 							1
 						}
-						.then(argument<String>("password", StringArgumentType.greedyString())
-							.executes { context ->
+						.then(argument("password", StringArgumentType.greedyString())
+							.executes { context: CommandContext<FabricClientCommandSource> ->
 								val username = StringArgumentType.getString(context, "username")
 								val password = StringArgumentType.getString(context, "password")
-								context.source.sendFeedback(Text.literal(GitManager.setAuth(username, password)))
+								context.source.sendFeedback(Component.literal(GitManager.setAuth(username, password)))
 								1
 							}
 						)
@@ -395,46 +392,43 @@ class MCGitClient : ClientModInitializer {
 
 
 
-
 		UseBlockCallback.EVENT.register{ player, world, hand, hitResult ->
-			if(world.isClient){
-				val blockPos = hitResult.blockPos.offset(hitResult.side)
+			if(world.isClientSide){
+				val blockPos = hitResult.blockPos.relative(hitResult.direction)
 				GitManager.handleBlockPlace(blockPos)
 			}
-			ActionResult.PASS
+			InteractionResult.PASS
 		}
 		AttackBlockCallback.EVENT.register{ player, world, hand, blockPos, direction ->
-			if(world.isClient){
+			if(world.isClientSide){
 				GitManager.handleBlockBreak(blockPos)
 			}
-			ActionResult.PASS
+			InteractionResult.PASS
 		}
 	}
-
-	private fun getClientBlockPos(context: CommandContext<FabricClientCommandSource>, name: String): BlockPos {
-		val arg = context.getArgument(name, PosArgument::class.java)
-		val player = context.source.player ?: throw IllegalStateException("Player is null")
-		if (arg is DefaultPosArgument) {
-			try {
-				val clazz = DefaultPosArgument::class.java
-				val fields = clazz.declaredFields
-				if (fields.size < 3) {
-					throw IllegalStateException("DefaultPosArgument has fewer fields than expected. Cannot parse.")
-				}
-				val xField = fields[0]; xField.isAccessible = true
-				val yField = fields[1]; yField.isAccessible = true
-				val zField = fields[2]; zField.isAccessible = true
-				val xArg = xField.get(arg) as CoordinateArgument
-				val yArg = yField.get(arg) as CoordinateArgument
-				val zArg = zField.get(arg) as CoordinateArgument
-				val x = xArg.toAbsoluteCoordinate(player.x)
-				val y = yArg.toAbsoluteCoordinate(player.y)
-				val z = zArg.toAbsoluteCoordinate(player.z)
-				return BlockPos(x.toInt(), y.toInt(), z.toInt())
+	
+	companion object {
+		private fun getClientBlockPos(context: CommandContext<FabricClientCommandSource>, argName: String): BlockPos {
+			val coords = context.getArgument(argName, Coordinates::class.java)
+			val source = context.source
+			val playerPos = source.getPosition()
+			
+			val x = getCoordinate(coords, playerPos.x, coords.isXRelative, "x", "left")
+			val y = getCoordinate(coords, playerPos.y, coords.isYRelative, "y", "up")
+			val z = getCoordinate(coords, playerPos.z, coords.isZRelative, "z", "forwards")
+			
+			return BlockPos(x.toInt(), y.toInt(), z.toInt())
+		}
+		
+		private fun getCoordinate(coords: Coordinates, playerValue: Double, isRelative: Boolean, absoluteField: String, relativeField: String): Double {
+			return try {
+				val field = coords.javaClass.getDeclaredField(if (isRelative) relativeField else absoluteField)
+				field.isAccessible = true
+				val value = field.getDouble(coords)
+				if (isRelative) playerValue + value else value
 			} catch (e: Exception) {
-				throw RuntimeException("Failed to parse coordinates via reflection: ${e.message}")
+				playerValue
 			}
 		}
-		throw IllegalArgumentException("Unsupported coordinate argument type: ${arg::class.simpleName}. Only standard coords (10 64 10) or relative (~ ~ ~) are supported.")
 	}
 }

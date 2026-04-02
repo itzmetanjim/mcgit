@@ -1,15 +1,16 @@
 package org.tanjim
 
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.MinecraftClient
-import net.minecraft.nbt.NbtHelper
-import net.minecraft.util.math.BlockPos
+import net.minecraft.client.Minecraft
+import net.minecraft.nbt.NbtUtils
+import net.minecraft.nbt.TagParser
+import net.minecraft.core.BlockPos
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.lib.ObjectId
 import java.io.File
-import net.minecraft.nbt.NbtCompound
+import net.minecraft.nbt.CompoundTag
 
 object GitManager {
     private val gameDir: File = FabricLoader.getInstance().gameDir.toFile()
@@ -97,9 +98,10 @@ object GitManager {
     }
     fun getActiveDimensionDir(): File? {
         val root = getRepoRoot() ?: return null
-        val world = MinecraftClient.getInstance().world ?: return null
-        val dim = world.registryKey.value
-        return File(root, "${dim.namespace}/${dim.path}")
+        val world = Minecraft.getInstance().level ?: return null
+        val dimKey = world.dimension()
+        val dim = dimKey.identifier()
+        return File(root, "${dim.getNamespace()}/${dim.getPath()}")
     }
     fun activateRepository(name: String): String{
         val repoRoot = File(rootReposDir, name)
@@ -110,20 +112,21 @@ object GitManager {
         return "Activated repository '$name'."
     }
     private fun getCurrentDimensionPath(): String {
-        val world = MinecraftClient.getInstance().world ?: return "overworld"
-        val id = world.registryKey.value
-        return "${id.namespace}/${id.path}"
+        val world = Minecraft.getInstance().level ?: return "overworld"
+        val dimKey = world.dimension()
+        val id = dimKey.identifier()
+        return "${id.getNamespace()}/${id.getPath()}"
     }
     fun getOrigin(): BlockPos {
-        val root = getRepoRoot() ?: return BlockPos.ORIGIN
+        val root = getRepoRoot() ?: return BlockPos.ZERO
         val file = File(root, "origin.txt")
-        if (!file.exists()) return BlockPos.ORIGIN
+        if (!file.exists()) return BlockPos.ZERO
 
         return try {
             val parts = file.readText().trim().split(",")
             BlockPos(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
         } catch (_: Exception) {
-            BlockPos.ORIGIN
+            BlockPos.ZERO
         }
     }
 
@@ -155,8 +158,8 @@ object GitManager {
         return try {
             Git.init().setDirectory(repoRoot).setInitialBranch("main").call().use {
                 activeRepo = name
-                val player = MinecraftClient.getInstance().player
-                if (player != null) saveOrigin(player.blockPos)
+                val player = Minecraft.getInstance().player
+                if (player != null) saveOrigin(player.blockPosition()())
                 "Initialized new MCGit repository '$name' at ${repoRoot.absolutePath}"
             }
         } catch (e: Exception) {
@@ -165,7 +168,7 @@ object GitManager {
     }
 
     private fun saveBlockToDisk(pos: BlockPos): Boolean {
-        val world = MinecraftClient.getInstance().world ?: return false
+        val world = Minecraft.getInstance().level ?: return false
         val dimDir = getActiveDimensionDir() ?: return false
         val origin = getOrigin()
 
@@ -174,7 +177,7 @@ object GitManager {
         val relZ = pos.z - origin.z
 
         val state = world.getBlockState(pos)
-        val snbt = NbtHelper.fromBlockState(state).toString()
+        val snbt = NbtUtils.writeBlockState(state).toString()
 
         val file = File(dimDir, "$relX/$relY/$relZ.snbt")
         return try {
@@ -442,19 +445,18 @@ object GitManager {
             return "Error in unstaging range of blocks : ${e.message}"
         }
     }
-    fun nbtToSetblock(x: Int, y:Int, z:Int, nbt: NbtCompound):String{
-        val blockId=nbt.getString("Name");
-        val properties=nbt.getCompound("Properties")
-        val sb = StringBuilder("setblock $x $y $z ${blockId.get()}")
-        properties.ifPresent{nbt->
-            if(!nbt.isEmpty){
+    fun nbtToSetblock(x: Int, y:Int, z:Int, nbt: CompoundTag):String{
+        val blockId = nbt.getStringOr("Name", "minecraft:air")
+        val properties = nbt.getCompoundOrEmpty("Properties")
+        val sb = StringBuilder("setblock $x $y $z $blockId")
+        if(!properties.isEmpty){
             val propList = mutableListOf<String>()
-            for (key in nbt.keys) {
-                val value = nbt.get(key)?.asString()?.get() ?: continue
+            for (key in properties.keySet()) {
+                val value = properties.getStringOr(key, "")
                 propList.add("$key=$value")
             }
             sb.append("[${propList.joinToString(",")}]")
-        }}
+        }
 
         sb.append(" replace")
         return sb.toString()
@@ -565,7 +567,7 @@ object GitManager {
         }
 
         for (entry in entries) {
-            val nbt = net.minecraft.nbt.StringNbtReader.readCompound(entry.snbt) as NbtCompound
+            val nbt = TagParser.parseCompoundFully(entry.snbt)
             val cmd = nbtToSetblock(entry.worldX, entry.worldY, entry.worldZ, nbt)
             CommandQueue.add(cmd)
         }
@@ -649,10 +651,10 @@ object GitManager {
         } catch (e:Exception) {return "Error in getting status: ${e.message}"} //im tired of the kotlin "return try" statements
     }
     fun isMagicOffhand(): Boolean {
-        val player = MinecraftClient.getInstance().player ?: return false
-        val stack = player.offHandStack
-        if (stack.item != net.minecraft.item.Items.RED_WOOL) return false
-        return stack.hasEnchantments()
+        val player = Minecraft.getInstance().player ?: return false
+        val stack = player.getOffhandItem()
+        if (stack.item != net.minecraft.world.item.Items.RED_WOOL) return false
+        return stack.isEnchanted
     }
     fun setAutoAdd(option: String):String{ //option is true/false/toggle/empty string
         return try {
@@ -700,41 +702,41 @@ object GitManager {
         } catch(e: Exception){"Error in setting auto-rm: ${e.message}"}
 
     }
-    fun isCreative(client: MinecraftClient): Boolean {
-        val mode = client.interactionManager?.currentGameMode
-        return mode == net.minecraft.world.GameMode.CREATIVE
+    fun isCreative(client: Minecraft): Boolean {
+        val mode = client.gameMode?.playerMode
+        return mode == net.minecraft.world.level.GameType.CREATIVE
     }
     fun handleBlockPlace(pos: BlockPos){
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         if(!isCreative(client)) return
         val hasMagicWool = isMagicOffhand()
         if (shouldAutoAdd != hasMagicWool) {
             /*val msg=addBlock(pos)
-            client.player?.sendMessage(net.minecraft.text.Text.literal(msg), true)
+            client.player?.sendSystemMessage(net.minecraft.network.chat.Component.literal(msg))
             println("[MCGit] Auto-add: $msg")*/
             autoAddQueue.add(pos)
         }
     }
     fun handleBlockBreak(pos: BlockPos){
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         if(!isCreative(client)) return
         val hasMagicWool = isMagicOffhand()
         if (shouldAutoRm != hasMagicWool) {
             val msg=unstageBlock(pos)
-            client.player?.sendMessage(net.minecraft.text.Text.literal(msg), true)
+            client.player?.sendSystemMessage(net.minecraft.network.chat.Component.literal(msg))
             println("[MCGit] Auto-rm: $msg")
         }
     }
     fun processTick(){
         if(autoAddQueue.isEmpty()) return
-        val client = MinecraftClient.getInstance()
-        val world = client.world ?: return
+        val client = Minecraft.getInstance()
+        val world = client.level ?: return
         val iterator = autoAddQueue.iterator()
         while (iterator.hasNext()) {
             val pos = iterator.next()
             if(!world.getBlockState(pos).isAir){
                 val msg = addBlock(pos)
-                MinecraftClient.getInstance().player?.sendMessage(net.minecraft.text.Text.literal(msg), true)
+                Minecraft.getInstance().player?.sendSystemMessage(net.minecraft.network.chat.Component.literal(msg))
                 println("[MCGit] Auto-add: $msg")
                 iterator.remove()
             }
@@ -756,9 +758,9 @@ object GitManager {
                     val dest = File(rootReposDir,name)
                     src.copyRecursively(dest,true)
                     activateRepository(name)
-                    val client = MinecraftClient.getInstance()
+                    val client = Minecraft.getInstance()
                     val player = client.player
-                    if (player != null) saveOrigin(player.blockPos)
+                    if (player != null) saveOrigin(player.blockPosition()())
                     return "Cloned local repository '$url' to '$name'."
                 }catch(e:Exception){
                     return "Error in cloning local repository: ${e.message}"
@@ -771,9 +773,9 @@ object GitManager {
             getCredentialsProvider()?.let { cloneCmd.setCredentialsProvider(it) }
             cloneCmd.call()
             activateRepository(name)
-            val client = MinecraftClient.getInstance()
+            val client = Minecraft.getInstance()
             val player = client.player
-            if (player != null) saveOrigin(player.blockPos)
+            if (player != null) saveOrigin(player.blockPosition()())
             return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
             return "Error in cloning repository from URL: ${e.message}"
@@ -797,9 +799,9 @@ object GitManager {
                     val dest = File(rootReposDir,name)
                     src.copyRecursively(dest,true)
                     activateRepository(name)
-                    val client = MinecraftClient.getInstance()
+                    val client = Minecraft.getInstance()
                     val player = client.player
-                    if (player != null) saveOrigin(player.blockPos)
+                    if (player != null) saveOrigin(player.blockPosition()())
                     gitToWorld()
                     return "Cloned local repository '$url' to '$name'."
                 }catch(e:Exception){
@@ -813,9 +815,9 @@ object GitManager {
             getCredentialsProvider()?.let { cloneCmd.setCredentialsProvider(it) }
             cloneCmd.call()
             activateRepository(name)
-            val client = MinecraftClient.getInstance()
+            val client = Minecraft.getInstance()
             val player = client.player
-            if (player != null) saveOrigin(player.blockPos)
+            if (player != null) saveOrigin(player.blockPosition()())
             gitToWorld()
             return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
@@ -827,10 +829,10 @@ object GitManager {
         val oldActivated = activeRepo
         activateRepository(name)
         val oldOrigin = getOrigin()
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player
         if (player == null) return "Error: No player found."
-        saveOrigin(player.blockPos)
+        saveOrigin(player.blockPosition()())
         gitToWorld()
         saveOrigin(oldOrigin)
         activateRepository(oldActivated?:"")

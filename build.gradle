@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 	id "org.jetbrains.kotlin.jvm" version "2.3.0"
 }
@@ -30,6 +30,14 @@ loom {
 	}
 
 }
+sourceSets {
+    main {
+        kotlin {
+            srcDirs += 'src/main/kotlin'
+        }
+    }
+}
+
 
 fabricApi {
 	configureDataGeneration {
@@ -40,13 +48,11 @@ fabricApi {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	//mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
     def jgitVersion = '7.5.0.202512021534-r'
     implementation 'org.eclipse.jgit:org.eclipse.jgit:' + jgitVersion
     include 'org.eclipse.jgit:org.eclipse.jgit:' + jgitVersion	
@@ -61,12 +67,12 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
-		jvmTarget = 21
+		jvmTarget = 25
 	}
 }
 
@@ -76,8 +82,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
@@ -105,3 +111,22 @@ publishing {
 		// retrieving dependencies.
 	}
 }
+sourceSets {
+	main {
+		kotlin {
+			srcDirs += 'src/client/kotlin'
+		}
+		resources {
+            srcDirs += 'src/client/resources'
+        }
+	}
+}
+tasks.withType(Copy).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(Jar).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+
