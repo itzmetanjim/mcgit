@@ -159,7 +159,7 @@ object GitManager {
             Git.init().setDirectory(repoRoot).setInitialBranch("main").call().use {
                 activeRepo = name
                 val player = Minecraft.getInstance().player
-                if (player != null) saveOrigin(player.blockPosition()())
+                if (player != null) saveOrigin(player.blockPosition())
                 "Initialized new MCGit repository '$name' at ${repoRoot.absolutePath}"
             }
         } catch (e: Exception) {
@@ -760,7 +760,7 @@ object GitManager {
                     activateRepository(name)
                     val client = Minecraft.getInstance()
                     val player = client.player
-                    if (player != null) saveOrigin(player.blockPosition()())
+                    if (player != null) saveOrigin(player.blockPosition())
                     return "Cloned local repository '$url' to '$name'."
                 }catch(e:Exception){
                     return "Error in cloning local repository: ${e.message}"
@@ -775,7 +775,7 @@ object GitManager {
             activateRepository(name)
             val client = Minecraft.getInstance()
             val player = client.player
-            if (player != null) saveOrigin(player.blockPosition()())
+            if (player != null) saveOrigin(player.blockPosition())
             return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
             return "Error in cloning repository from URL: ${e.message}"
@@ -801,7 +801,7 @@ object GitManager {
                     activateRepository(name)
                     val client = Minecraft.getInstance()
                     val player = client.player
-                    if (player != null) saveOrigin(player.blockPosition()())
+                    if (player != null) saveOrigin(player.blockPosition())
                     gitToWorld()
                     return "Cloned local repository '$url' to '$name'."
                 }catch(e:Exception){
@@ -817,7 +817,7 @@ object GitManager {
             activateRepository(name)
             val client = Minecraft.getInstance()
             val player = client.player
-            if (player != null) saveOrigin(player.blockPosition()())
+            if (player != null) saveOrigin(player.blockPosition())
             gitToWorld()
             return "Cloned repository from '$actualUrl' to '$name'."
         }catch(e:Exception){
@@ -832,7 +832,7 @@ object GitManager {
         val client = Minecraft.getInstance()
         val player = client.player
         if (player == null) return "Error: No player found."
-        saveOrigin(player.blockPosition()())
+        saveOrigin(player.blockPosition())
         gitToWorld()
         saveOrigin(oldOrigin)
         activateRepository(oldActivated?:"")

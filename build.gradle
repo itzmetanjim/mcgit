@@ -112,7 +112,7 @@ publishing {
 	}
 }
 sourceSets {
-	main {
+	client {
 		kotlin {
 			srcDirs += 'src/client/kotlin'
 		}

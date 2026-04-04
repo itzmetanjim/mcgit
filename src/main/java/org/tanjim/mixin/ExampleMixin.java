@@ -1,4 +1,4 @@
-package org.tanjim.mixin;
+/*package org.tanjim.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,4 +12,4 @@ public class ExampleMixin {
 	private void init(CallbackInfo info) {
 		// This code is injected into the start of MinecraftServer.loadWorld()V
 	}
-}
+}*/
