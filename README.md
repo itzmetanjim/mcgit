@@ -2,7 +2,7 @@
 
 ![MCGit Logo](logo.png)
 
-**Requires MC 1.21.11 Fabric, fabric-api and fabric-language-kotlin**
+**Requires MC 26.1 Fabric, fabric-api and fabric-language-kotlin**
 
 MCGit is a Minecraft mod that brings Git-like version control to your Minecraft world. It allows you to track changes to
 blocks and entities, commit those changes, and manage different versions of your world.
